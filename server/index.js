@@ -37,6 +37,10 @@ app.use(bodyParser.urlencoded({ extended: false }))
 // parse application/json
 app.use(bodyParser.json())
 
+//for testing porpose
+app.get('/', (req, res)=>{
+   res.status(200).send('home page')
+})
 app.use('/api/auth', AuthController);
 app.post("/upload", controller.upload);
 app.get("/files", controller.getListFiles);
