@@ -1,6 +1,7 @@
 const fs = require('fs');
 const uploadFile = require("../middleware/upload");
-const baseUrl = 'http://localhost:8080/';
+// Use environment variable for base URL
+const baseUrl = process.env.BASE_URL || 'http://localhost:8080/';
 
 const upload = async (req, res) => {
   try {

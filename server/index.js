@@ -1,3 +1,4 @@
+require('dotenv').config();
 var express = require('express');
 var bodyParser = require('body-parser')
 var cors = require('cors');
@@ -28,7 +29,14 @@ var machine = require('node-machine-id');
 
 
 var app = express();
-app.use(cors());
+
+// Configure CORS with environment variable
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || '*',
+  credentials: true
+};
+app.use(cors(corsOptions));
+
 app.use('/resources/static/assets/uploads', express.static(dir));
 
 
@@ -52,4 +60,8 @@ app.use('/satsang', SatsangController);
 app.use('/servey', ServeyController);
 
 
-app.listen(8080, () => console.log(`Started server at http://localhost:8080!`));
+const PORT = process.env.PORT || 8080;
+
+app.listen(PORT, () => {
+  console.log(`Server started on port ${PORT}`);
+});
