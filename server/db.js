@@ -3,13 +3,20 @@ var mongoose = require('mongoose');
 // Use environment variable for MongoDB URI, fallback to default for local development
 var uri = process.env.MONGODB_URI;
 
+if (!uri) {
+  console.error('MONGODB_URI environment variable is not set');
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+}
+
 mongoose.connect(uri, {
   useNewUrlParser: true, 
   dbName: 'story4u',  
   useUnifiedTopology: true
 })
-.then(() => console.log('connection successful'))
-.catch((err) => console.log('no connection', err));
+.then(() => console.log('MongoDB connection successful'))
+.catch((err) => console.log('MongoDB connection error:', err));
 
 //user - ark
 //pass - arksethy
