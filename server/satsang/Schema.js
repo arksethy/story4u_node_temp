@@ -6,7 +6,8 @@ var schema = new mongoose.Schema({
     category: Number,
     createdAt: Date,
     updatedAt: Date,
-    userEmail: String 
+    userEmail: String,
+    isDeleted: { type: Boolean, default: false }
 });
 
 module.exports = mongoose.model('Satsang', schema, 'satsang');

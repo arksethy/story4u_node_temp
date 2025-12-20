@@ -19,6 +19,11 @@ router.post('/addUpdate', function(req, res) {
                            category: req.body.category,
                            updatedAt: new Date()
                         }}
+        
+        // Add isDeleted to update if provided
+        if (req.body.isDeleted !== undefined) {
+            doc.$set.isDeleted = req.body.isDeleted;
+        }
 
             Satsang.update({_id: req.body.id, userEmail: req.body.user}, doc, function(err, response){
                 if(err) res.json({message: "Error in updating satsang with id " + req.body.id});
