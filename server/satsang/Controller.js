@@ -14,13 +14,13 @@ router.post('/addUpdate', function(req, res) {
         if (!(user.role ==='admin' || user.role ==='superadmin')) return res.status(404).send({auth: false, msg: 'User should be admin or superadmin.'});
 
         if(req.body.id){
-            // First check if the satsang exists and verify the user is the creator
+            // First check if the satsang exists
             Satsang.findOne({_id: req.body.id}, function(err, satsang) {
                 if (err) return res.status(500).send({ status: false, msg: 'Error in finding satsang.' });
                 if (!satsang) return res.status(404).send({ status: false, msg: 'Satsang not found.' });
                 
-                // Check if the current user is the creator of this satsang
-                if (satsang.userEmail !== req.body.user) {
+                // If user is not superadmin, check if they are the creator
+                if (user.role !== 'superadmin' && satsang.userEmail !== req.body.user) {
                     return res.status(403).send({ status: false, msg: 'You can only update satsang that you created.' });
                 }
                 
@@ -35,7 +35,13 @@ router.post('/addUpdate', function(req, res) {
                     doc.$set.isDeleted = req.body.isDeleted;
                 }
 
-                Satsang.updateOne({_id: req.body.id, userEmail: req.body.user}, doc, function(err, response){
+                // Build query: superadmin can update any, admin can only update their own
+                let query = {_id: req.body.id};
+                if (user.role !== 'superadmin') {
+                    query.userEmail = req.body.user;
+                }
+
+                Satsang.updateOne(query, doc, function(err, response){
                     if(err) return res.status(500).send({ status: false, msg: 'Error in updating satsang.' });
                     if(response.matchedCount === 0) {
                         return res.status(404).send({ status: false, msg: 'Satsang not found or you do not have permission to update it.' });
