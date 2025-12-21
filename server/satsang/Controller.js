@@ -3,15 +3,19 @@ var router = express.Router();
 var bodyParser = require('body-parser');
 var Satsang = require('./Schema');
 const User = require('../user/User');
+var VerifyToken = require('../auth/VerifyToken');
 
 router.use(bodyParser.urlencoded({ extended: false }));
 router.use(bodyParser.json());
 
-router.post('/addUpdate', function(req, res) {
-    User.findOne({ email: req.body.user }, function (err, user) {
-        if (err) return res.status(500).send({auth: false, msg: 'Error on the server.'});
-        if (!user) return res.status(404).send({auth: false, msg: 'No user found.'});
-        if (!(user.role ==='admin' || user.role ==='superadmin')) return res.status(404).send({auth: false, msg: 'User should be admin or superadmin.'});
+router.post('/addUpdate', VerifyToken, function(req, res) {
+    // Get authenticated user from token
+    User.findById(req.userId, function (err, user) {
+        if (err) return res.status(500).send({status: false, msg: 'Error on the server.'});
+        if (!user) return res.status(404).send({status: false, msg: 'User not found.'});
+        if (!(user.role ==='admin' || user.role ==='superadmin')) {
+            return res.status(403).send({status: false, msg: 'User should be admin or superadmin.'});
+        }
 
         if(req.body.id){
             // First check if the satsang exists
@@ -20,7 +24,7 @@ router.post('/addUpdate', function(req, res) {
                 if (!satsang) return res.status(404).send({ status: false, msg: 'Satsang not found.' });
                 
                 // If user is not superadmin, check if they are the creator
-                if (user.role !== 'superadmin' && satsang.userEmail !== req.body.user) {
+                if (user.role !== 'superadmin' && satsang.userEmail !== user.email) {
                     return res.status(403).send({ status: false, msg: 'You can only update satsang that you created.' });
                 }
                 
@@ -38,7 +42,7 @@ router.post('/addUpdate', function(req, res) {
                 // Build query: superadmin can update any, admin can only update their own
                 let query = {_id: req.body.id};
                 if (user.role !== 'superadmin') {
-                    query.userEmail = req.body.user;
+                    query.userEmail = user.email;
                 }
 
                 Satsang.updateOne(query, doc, function(err, response){
@@ -51,15 +55,20 @@ router.post('/addUpdate', function(req, res) {
             });
 
         }else{
+            // Validate required fields for creation
+            if (!req.body.name || !req.body.description || !req.body.category) {
+                return res.status(400).send({ status: false, msg: 'Name, description, and category are required.' });
+            }
+
             Satsang.create({
                 name: req.body.name,
                 description: req.body.description,
                 category: req.body.category,
                 createdAt: new Date(),
-                userEmail: req.body.user
+                userEmail: user.email // Use authenticated user's email from token
               },
-              function (err, user) {
-                if (err) return res.status(500).send("There was a problem in adding satsang.")
+              function (err, satsang) {
+                if (err) return res.status(500).send({ status: false, msg: 'There was a problem in adding satsang.' });
                
                 res.status(200).send({ status: true, action: 'add', msg: 'Satsang has successfully added' });
               });
@@ -88,9 +97,14 @@ router.get('/:id', function(req, res) {
     })
 })
 
-router.post('/delete', function(req, res) {
-    // First verify the user exists and has superadmin role
-    User.findOne({ email: req.body.user }, function (err, user) {
+router.post('/delete', VerifyToken, function(req, res) {
+    // Validate required field
+    if (!req.body.id) {
+        return res.status(400).send({ status: false, msg: 'Satsang ID is required.' });
+    }
+
+    // Get authenticated user from token
+    User.findById(req.userId, function (err, user) {
         if (err) return res.status(500).send({ status: false, msg: 'Error on the server.' });
         if (!user) return res.status(404).send({ status: false, msg: 'User not found.' });
         if (user.role !== 'superadmin') {
