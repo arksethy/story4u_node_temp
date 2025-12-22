@@ -5,6 +5,7 @@ var rateLimit = require('express-rate-limit');
 var Servey = require('./schema');
 const User = require('../user/User');
 var VerifyToken = require('../auth/VerifyToken');
+var { sanitizeHTML, sanitizeText } = require('../middleware/sanitize');
 
 // Rate limiter for voting (public endpoint - unauthenticated users)
 // Uses IP + User-Agent for better tracking
@@ -42,10 +43,27 @@ router.post('/create', VerifyToken, function (req, res) {
       return res.status(400).send({ status: false, msg: 'At least 2 choices are required.' });
     }
 
+    // Sanitize choices array (each choice object might have text fields)
+    var sanitizedChoices = req.body.choices.map(function(choice) {
+      var sanitized = {};
+      // Sanitize each field in the choice object
+      for (var key in choice) {
+        if (choice.hasOwnProperty(key)) {
+          // If it's a text field, sanitize it; otherwise keep as is
+          if (typeof choice[key] === 'string') {
+            sanitized[key] = sanitizeText(choice[key]); // Survey choices should be plain text
+          } else {
+            sanitized[key] = choice[key];
+          }
+        }
+      }
+      return sanitized;
+    });
+
     Servey.create(
       {
-        title: req.body.title,
-        choices: req.body.choices,
+        title: sanitizeText(req.body.title), // Title should be plain text
+        choices: sanitizedChoices, // Sanitized choices
         totalVotes: 0,
         createdAt: new Date(),
       },

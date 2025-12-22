@@ -4,6 +4,7 @@ var bodyParser = require('body-parser');
 var Gif = require('./Gif');
 const User = require('../user/User');
 var VerifyToken = require('../auth/VerifyToken');
+var { sanitizeHTML, sanitizeText } = require('../middleware/sanitize');
 
 router.use(bodyParser.urlencoded({ extended: false }));
 router.use(bodyParser.json());
@@ -30,11 +31,13 @@ router.post('/addUpdate', VerifyToken, function(req, res) {
                     return res.status(403).send({ status: false, msg: 'You can only update gif that you created.' });
                 }
 
-                let doc = {'$set':{gifInstance: req.body.gifInstance, 
-                                   name: req.body.name,
-                                   outerFile: req.body.outerFile,
-                                   audio: req.body.audio
-                                }}
+                // Sanitize HTML content before storing
+                let doc = {'$set':{
+                    gifInstance: sanitizeHTML(req.body.gifInstance), // Can contain HTML/iframes
+                    name: sanitizeText(req.body.name), // Name should be plain text
+                    outerFile: sanitizeText(req.body.outerFile), // URL should be plain text
+                    audio: sanitizeText(req.body.audio) // URL should be plain text
+                }}
 
                 // Build query: superadmin can update any, regular users can only update their own
                 let query = {_id: req.body.gifId};
@@ -57,11 +60,12 @@ router.post('/addUpdate', VerifyToken, function(req, res) {
                 return res.status(400).send({ status: false, msg: 'Name is required.' });
             }
 
+            // Sanitize HTML content before storing
             Gif.create({
-                name: req.body.name,
-                gifInstance: req.body.gifInstance,
-                outerFile: req.body.outerFile,
-                audio: req.body.audio,
+                name: sanitizeText(req.body.name), // Name should be plain text
+                gifInstance: sanitizeHTML(req.body.gifInstance), // Can contain HTML/iframes
+                outerFile: sanitizeText(req.body.outerFile), // URL should be plain text
+                audio: sanitizeText(req.body.audio), // URL should be plain text
                 userEmail: user.email, // Use authenticated user's email from token
                 role: user.role
               },

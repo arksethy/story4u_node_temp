@@ -648,4 +648,52 @@ router.post('/register', function(req, res) {
     });
   });
 
+  // Delete user - Only superadmin can delete users
+  router.delete('/user/:userId', VerifyToken, VerifySuperAdmin, function(req, res) {
+    var userId = req.params.userId;
+
+    // Prevent superadmin from deleting themselves
+    if (userId.toString() === req.userId.toString()) {
+      return res.status(400).send({ 
+        status: false, 
+        message: 'You cannot delete your own account' 
+      });
+    }
+
+    User.findById(userId, function (err, user) {
+      if (err) {
+        return res.status(500).send({ 
+          status: false, 
+          message: 'Error finding user' 
+        });
+      }
+      if (!user) {
+        return res.status(404).send({ 
+          status: false, 
+          message: 'User not found' 
+        });
+      }
+
+      // Delete the user
+      User.deleteOne({ _id: userId }, function (err, result) {
+        if (err) {
+          return res.status(500).send({ 
+            status: false, 
+            message: 'Error deleting user' 
+          });
+        }
+        if (result.deletedCount === 0) {
+          return res.status(404).send({ 
+            status: false, 
+            message: 'User not found' 
+          });
+        }
+        res.status(200).send({ 
+          status: true, 
+          message: 'User deleted successfully' 
+        });
+      });
+    });
+  });
+
   module.exports = router;
